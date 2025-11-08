@@ -6,23 +6,47 @@ Production Cost Optimization
 실전 전략들을 구현합니다.
 """
 
-import sys
-import os
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime, timedelta
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
+try:
+    from examples.shared.utils import (
+        count_tokens,
+        calculate_cost,
+        print_section,
+        print_success,
+    )
 
-from shared.utils import (
-    count_tokens,
-    format_tokens,
-    calculate_cost,
-    print_section,
-    print_success,
-    print_warning
-)
+    from examples.production_ready.core.error_handling import (
+        validate_input,
+        ValidationError,
+        OptimizationError,
+        TokenCountingError,
+        with_retry,
+    )
+except ModuleNotFoundError:  # pragma: no cover - fallback for direct script execution
+    import sys
+    from pathlib import Path
+
+    PROJECT_ROOT = Path(__file__).resolve().parents[3]
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    from examples.shared.utils import (
+        count_tokens,
+        calculate_cost,
+        print_section,
+        print_success,
+    )
+
+    from examples.production_ready.core.error_handling import (
+        validate_input,
+        ValidationError,
+        OptimizationError,
+        TokenCountingError,
+        with_retry,
+    )
 
 
 @dataclass
@@ -74,6 +98,11 @@ class CostOptimizer:
         Returns:
             최적화 결과
         """
+        try:
+            query, context = validate_input(query, context, min_quality, max_cost)
+        except ValidationError as exc:
+            raise OptimizationError(f"Invalid optimization inputs: {exc}") from exc
+
         self.metrics['total_queries'] += 1
 
         # 1. 캐시 확인
@@ -92,20 +121,20 @@ class CostOptimizer:
         optimized_context = self._optimize_context(context, model)
 
         # 4. 비용 계산
-        input_tokens = count_tokens(query + optimized_context, model['name'])
+        input_tokens = self._count_tokens(query + optimized_context, model.name)
         estimated_output = 500  # 예상 출력
-        cost = calculate_cost(input_tokens, estimated_output, model['name'])
+        cost = self._calculate_cost(input_tokens, estimated_output, model.name)
 
         self.metrics['total_cost'] += cost
 
         result = {
-            'model': model['name'],
-            'original_context_tokens': count_tokens(context),
-            'optimized_context_tokens': count_tokens(optimized_context),
+            'model': model.name,
+            'original_context_tokens': self._count_tokens(context, model.name),
+            'optimized_context_tokens': self._count_tokens(optimized_context, model.name),
             'total_input_tokens': input_tokens,
             'estimated_output_tokens': estimated_output,
             'estimated_cost': cost,
-            'quality_score': model['quality_score'],
+            'quality_score': model.quality_score,
             'optimized_context': optimized_context,
             'cached': False
         }
@@ -181,8 +210,8 @@ class CostOptimizer:
             # 비용 제한 내에서 최고 품질
             affordable = []
             for model in candidates:
-                input_tokens = count_tokens(query + context, model.name)
-                cost = calculate_cost(input_tokens, 500, model.name)
+                input_tokens = self._count_tokens(query + context, model.name)
+                cost = self._calculate_cost(input_tokens, 500, model.name)
                 if cost <= max_cost:
                     affordable.append((model, cost))
 
@@ -221,7 +250,7 @@ class CostOptimizer:
         - 저품질 모델 → 더 많은 컨텍스트 (명확성 보완)
         - 고품질 모델 → 압축된 컨텍스트 (비용 절감)
         """
-        tokens = count_tokens(context)
+        tokens = self._count_tokens(context, model.name)
 
         if model.quality_score >= 0.9:
             # 고품질 모델: 공격적 압축 가능
@@ -243,7 +272,7 @@ class CostOptimizer:
             current_tokens = 0
 
             for sentence in sentences:
-                sentence_tokens = count_tokens(sentence)
+                sentence_tokens = self._count_tokens(sentence, model.name)
                 if current_tokens + sentence_tokens <= target_tokens:
                     compressed.append(sentence)
                     current_tokens += sentence_tokens
@@ -265,6 +294,21 @@ class CostOptimizer:
             'cache_hit_rate': cache_hit_rate,
             'avg_cost_per_query': self.metrics['total_cost'] / max(1, self.metrics['total_queries'])
         }
+
+    @with_retry(max_attempts=3, backoff_factor=2.0, exceptions=(Exception,))
+    def _count_tokens(self, text: str, model: str) -> int:
+        """Safely count tokens with retry handling."""
+        try:
+            return count_tokens(text, model)
+        except Exception as exc:  # pragma: no cover - defensive
+            raise TokenCountingError(f"Failed to count tokens for model {model}") from exc
+
+    def _calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
+        """Wrapper to calculate cost with clear intent."""
+        try:
+            return calculate_cost(input_tokens, output_tokens, model)
+        except Exception as exc:  # pragma: no cover - defensive
+            raise OptimizationError(f"Failed to calculate cost for {model}") from exc
 
 
 def demonstrate_cost_optimization():

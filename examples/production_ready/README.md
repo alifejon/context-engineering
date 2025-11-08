@@ -21,7 +21,7 @@
 ## 구조
 
 ```
-production-ready/
+production_ready/
 ├── core/                      # 핵심 기능
 │   ├── error_handling.py      # 에러 핸들링 & 재시도
 │   ├── logging_config.py      # 구조화된 로깅
@@ -48,7 +48,7 @@ production-ready/
 ## 설치
 
 ```bash
-cd examples/production-ready
+cd examples/production_ready
 
 # 의존성 설치
 pip install -r requirements.txt
