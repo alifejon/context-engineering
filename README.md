@@ -42,6 +42,10 @@ LLM Response
 
 ## 📚 학습 경로
 
+### 🎓 교육용 학습 경로 (Learning Track)
+
+**목표**: Context Engineering 개념과 기법 이해하기
+
 ### 1️⃣ 기초 개념 (Fundamentals)
 - [Context Engineering이란?](docs/01-fundamentals/what-is-context-engineering.md)
 - [컨텍스트 윈도우 관리](docs/01-fundamentals/context-window-management.md)
@@ -63,6 +67,93 @@ LLM Response
 - [컨텍스트 문제 디버깅](docs/04-practical-guides/debugging-context-issues.md)
 - [성능 최적화](docs/04-practical-guides/performance-optimization.md)
 - [모범 사례](docs/04-practical-guides/best-practices.md)
+
+---
+
+### 🏭 프로덕션 학습 경로 (Production Track)
+
+**목표**: 실제 회사에서 사용 가능한 시스템 구축하기
+
+**📖 [10주 프로덕션 학습 로드맵](learning-path/README.md)** ⭐ **NEW!**
+
+#### 전체 개요
+- **기간**: 10주 (Part-time) 또는 6주 (Full-time)
+- **시간 투자**: 주당 20-40시간
+- **난이도**: ⭐⭐⭐⭐ (중급-고급)
+- **산출물**: 프로덕션 배포 가능한 완전한 API 시스템
+
+#### 주차별 학습 내용
+
+| Week | 주제 | 핵심 내용 | 난이도 |
+|------|------|-----------|--------|
+| 1-2 | [Foundation & Stability](learning-path/week-01-02-stability/) | Error handling, Logging, Testing | ⭐⭐⭐ |
+| 3-4 | [Data & Caching](learning-path/week-03-04-data-caching/) | PostgreSQL, Redis, Migrations | ⭐⭐⭐ |
+| 5-6 | API Server | FastAPI, Authentication, Rate limiting | ⭐⭐⭐⭐ |
+| 7-8 | Deployment & Monitoring | Docker, K8s, Prometheus, Grafana | ⭐⭐⭐⭐ |
+| 9-10 | Advanced & Optimization | Async, Performance, Security | ⭐⭐⭐⭐⭐ |
+| 11-12 | [Final Project](learning-path/final-project/) | Complete Production System | ⭐⭐⭐⭐⭐ |
+
+#### 학습 성과
+
+10주 완료 시:
+- ✅ 프로덕션 수준의 에러 핸들링
+- ✅ 구조화된 로깅 및 모니터링
+- ✅ 80%+ 테스트 커버리지
+- ✅ FastAPI 기반 REST API
+- ✅ PostgreSQL + Redis 데이터 계층
+- ✅ Docker/Kubernetes 배포
+- ✅ CI/CD 파이프라인
+- ✅ 실시간 모니터링 대시보드
+
+#### 프로덕션 준비 평가
+
+**현재 상태 평가**: [Production Readiness Evaluation](PRODUCTION_READINESS_EVALUATION.md)
+- 교육용 코드: 9/10 ✅
+- 프로덕션 코드: 4/10 ❌ → **학습 경로로 10/10 달성 가능!**
+
+#### 프로덕션 예제 코드
+
+- [에러 핸들링 & 재시도](examples/production-ready/core/error_handling.py) - Circuit breaker, Retry logic
+- [구조화된 로깅](examples/production-ready/core/logging_config.py) - JSON logs, Request tracing
+- [프로덕션 LLM 클라이언트](examples/production-ready/clients/llm_client.py) - 실제 OpenAI 연동
+- [테스트 예제](examples/production-ready/tests/) - Unit & Integration tests
+
+#### 빠른 시작
+
+```bash
+# Week 1-2 시작하기
+cd learning-path/week-01-02-stability
+cat README.md
+
+# 환경 설정
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 첫 번째 실습
+python exercises/01_error_handling_basic.py
+```
+
+---
+
+### 📊 학습 경로 선택 가이드
+
+| 특성 | 교육용 경로 | 프로덕션 경로 |
+|------|-------------|---------------|
+| **목표** | 개념 이해 및 기법 학습 | 실전 시스템 구축 |
+| **기간** | 4주 | 10-12주 |
+| **난이도** | ⭐⭐ | ⭐⭐⭐⭐ |
+| **산출물** | 프로토타입, 예제 | 프로덕션 배포 시스템 |
+| **코드 품질** | 학습용 (70%) | 프로덕션 수준 (100%) |
+| **테스트** | 선택적 | 필수 (80%+ 커버리지) |
+| **배포** | 로컬 실행 | K8s 프로덕션 배포 |
+| **모니터링** | print() | Prometheus + Grafana |
+| **추천 대상** | 초보자, 빠른 학습 | 실무 적용, 포트폴리오 |
+
+**💡 추천 학습 순서**:
+1. 교육용 경로로 기초 다지기 (4주)
+2. 프로덕션 경로로 실전 역량 쌓기 (10주)
+3. 실제 프로젝트에 적용하기
 
 ## 💻 실습 예제
 
