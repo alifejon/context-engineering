@@ -98,8 +98,8 @@ def with_retry(
                         )
                         raise
 
-                    # Calculate backoff time
-                    wait_time = backoff_factor ** attempt
+                    # Calculate backoff time (exponential backoff starting at factor^1)
+                    wait_time = backoff_factor ** (attempt + 1)
 
                     logger.warning(
                         f"{func.__name__} attempt {attempt + 1} failed, "
@@ -299,10 +299,6 @@ class CircuitBreaker:
 
 # Example usage
 if __name__ == "__main__":
-    import sys
-    import os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
-
     # Setup logging
     logging.basicConfig(
         level=logging.INFO,

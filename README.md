@@ -113,10 +113,10 @@ LLM Response
 
 #### 프로덕션 예제 코드
 
-- [에러 핸들링 & 재시도](examples/production-ready/core/error_handling.py) - Circuit breaker, Retry logic
-- [구조화된 로깅](examples/production-ready/core/logging_config.py) - JSON logs, Request tracing
-- [프로덕션 LLM 클라이언트](examples/production-ready/clients/llm_client.py) - 실제 OpenAI 연동
-- [테스트 예제](examples/production-ready/tests/) - Unit & Integration tests
+- [에러 핸들링 & 재시도](examples/production_ready/core/error_handling.py) - Circuit breaker, Retry logic
+- [구조화된 로깅](examples/production_ready/core/logging_config.py) - JSON logs, Request tracing
+- [프로덕션 LLM 클라이언트](examples/production_ready/clients/llm_client.py) - 실제 OpenAI 연동
+- [테스트 예제](examples/production_ready/tests/) - Unit & Integration tests
 
 #### 빠른 시작
 

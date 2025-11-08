@@ -27,10 +27,7 @@ except ImportError:
     print("⚠️ OpenAI SDK not installed. Install with: pip install openai")
 
 # Error handling
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
-
-from examples.production_ready.core.error_handling import (
+from ..core.error_handling import (
     with_retry,
     LLMAPIError,
     RateLimitError as CustomRateLimitError,

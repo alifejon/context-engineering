@@ -6,11 +6,6 @@ Example of production-quality unit tests.
 
 import pytest
 import time
-from unittest.mock import Mock, patch
-
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..'))
 
 from examples.production_ready.core.error_handling import (
     with_retry,
@@ -22,6 +17,14 @@ from examples.production_ready.core.error_handling import (
 
 class TestRetryDecorator:
     """Test retry logic."""
+
+    @pytest.fixture(autouse=True)
+    def _no_sleep(self, monkeypatch):
+        """Prevent actual sleeping during retry tests."""
+        monkeypatch.setattr(
+            "examples.production_ready.core.error_handling.time.sleep",
+            lambda _: None,
+        )
 
     def test_success_on_first_attempt(self):
         """Function succeeds on first attempt."""
@@ -72,30 +75,39 @@ class TestRetryDecorator:
 
         assert call_count == 3
 
-    def test_exponential_backoff(self):
-        """Verify exponential backoff timing."""
+    def test_exponential_backoff(self, monkeypatch):
+        """Verify exponential backoff timing without real sleeping."""
         call_times = []
+        fake_time = 0.0
+
+        def fake_sleep(duration):
+            nonlocal fake_time
+            fake_time += duration
+
+        def fake_time_fn():
+            return fake_time
+
+        monkeypatch.setattr(
+            "examples.production_ready.core.error_handling.time.sleep",
+            fake_sleep,
+        )
+        monkeypatch.setattr(
+            "examples.production_ready.core.error_handling.time.time",
+            fake_time_fn,
+        )
 
         @with_retry(max_attempts=3, backoff_factor=2.0, exceptions=(ValueError,))
         def timed_function():
-            call_times.append(time.time())
+            call_times.append(fake_time_fn())
             if len(call_times) < 3:
                 raise ValueError("Error")
             return "success"
 
         result = timed_function()
 
-        # Verify timing (rough check)
         assert result == "success"
         assert len(call_times) == 3
-
-        # First retry should wait ~2s
-        delay1 = call_times[1] - call_times[0]
-        assert 1.9 < delay1 < 2.2
-
-        # Second retry should wait ~4s
-        delay2 = call_times[2] - call_times[1]
-        assert 3.9 < delay2 < 4.2
+        assert call_times == [0.0, 2.0, 6.0]
 
     def test_on_retry_callback(self):
         """Verify on_retry callback is called."""
