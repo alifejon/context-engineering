@@ -1,233 +1,127 @@
-# Token Counting Example
+#!/usr/bin/env python3
+"""
+Token Counting Example
 
-## 기본 토큰 카운팅
+기본 토큰 카운팅과 예산 관리 방법을 시연합니다.
+"""
 
-```python
-import tiktoken
+import sys
+import os
 
-def count_tokens(text: str, model: str = "gpt-4") -> int:
-    """정확한 토큰 수 계산"""
-    encoding = tiktoken.encoding_for_model(model)
-    return len(encoding.encode(text))
+# Add parent directory to path for shared utilities
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
-# 예제
-texts = [
-    "Hello, world!",
-    "Context engineering is important.",
-    "안녕하세요, 반갑습니다!"
-]
-
-for text in texts:
-    tokens = count_tokens(text)
-    print(f"Text: {text}")
-    print(f"Tokens: {tokens}")
-    print(f"Characters: {len(text)}")
-    print(f"Ratio: {len(text) / tokens:.2f} chars/token\n")
-
-# Output:
-# Text: Hello, world!
-# Tokens: 4
-# Characters: 13
-# Ratio: 3.25 chars/token
-#
-# Text: Context engineering is important.
-# Tokens: 6
-# Characters: 34
-# Ratio: 5.67 chars/token
-#
-# Text: 안녕하세요, 반갑습니다!
-# Tokens: 13
-# Characters: 14
-# Ratio: 1.08 chars/token
-```
-
-## 토큰 예산 관리
-
-```python
-class TokenBudgetManager:
-    """토큰 예산 관리"""
-
-    def __init__(self, max_tokens: int, model: str = "gpt-4"):
-        self.max_tokens = max_tokens
-        self.model = model
-        self.encoding = tiktoken.encoding_for_model(model)
-
-    def count(self, text: str) -> int:
-        """토큰 수 계산"""
-        return len(self.encoding.encode(text))
-
-    def fits_budget(self, text: str) -> bool:
-        """예산 내에 맞는지 확인"""
-        return self.count(text) <= self.max_tokens
-
-    def truncate_to_budget(self, text: str) -> str:
-        """예산에 맞게 자르기"""
-        tokens = self.encoding.encode(text)
-        if len(tokens) <= self.max_tokens:
-            return text
-
-        truncated_tokens = tokens[:self.max_tokens]
-        return self.encoding.decode(truncated_tokens)
-
-    def allocate_budget(self, components: dict[str, str]) -> dict[str, str]:
-        """여러 컴포넌트에 예산 분배"""
-        # 우선순위 순서로 할당
-        priority_order = ["system", "query", "context"]
-
-        allocated = {}
-        remaining_budget = self.max_tokens
-
-        for component in priority_order:
-            if component not in components:
-                continue
-
-            text = components[component]
-            tokens_needed = self.count(text)
-
-            if tokens_needed <= remaining_budget:
-                allocated[component] = text
-                remaining_budget -= tokens_needed
-            else:
-                # 남은 예산으로 자르기
-                allocated[component] = self.truncate_to_budget(text)
-                break
-
-        return allocated
-
-# 사용 예제
-manager = TokenBudgetManager(max_tokens=1000)
-
-components = {
-    "system": "You are a helpful assistant.",
-    "query": "What is context engineering?",
-    "context": "Context engineering is... (long text)"
-}
-
-allocated = manager.allocate_budget(components)
-
-for component, text in allocated.items():
-    print(f"{component}: {manager.count(text)} tokens")
-```
-
-## 실전 사용 예제
-
-```python
-def build_prompt_with_budget(
-    system_prompt: str,
-    user_query: str,
-    context_documents: list[str],
-    max_total_tokens: int = 8000,
-    output_buffer: int = 1000
-) -> dict:
-    """토큰 예산을 고려한 프롬프트 생성"""
-
-    manager = TokenBudgetManager(max_tokens=max_total_tokens)
-
-    # 필수 컴포넌트 토큰 계산
-    system_tokens = manager.count(system_prompt)
-    query_tokens = manager.count(user_query)
-
-    # 컨텍스트에 사용 가능한 토큰
-    available_for_context = (
-        max_total_tokens - system_tokens - query_tokens - output_buffer
-    )
-
-    print(f"Token Budget Breakdown:")
-    print(f"  Total budget: {max_total_tokens}")
-    print(f"  System prompt: {system_tokens}")
-    print(f"  User query: {query_tokens}")
-    print(f"  Output buffer: {output_buffer}")
-    print(f"  Available for context: {available_for_context}")
-
-    # 컨텍스트 문서 선택
-    selected_docs = []
-    used_tokens = 0
-
-    for doc in context_documents:
-        doc_tokens = manager.count(doc)
-        if used_tokens + doc_tokens <= available_for_context:
-            selected_docs.append(doc)
-            used_tokens += doc_tokens
-        else:
-            break
-
-    final_context = "\n\n".join(selected_docs)
-
-    print(f"  Context used: {used_tokens}")
-    print(f"  Documents included: {len(selected_docs)}/{len(context_documents)}")
-
-    return {
-        "system": system_prompt,
-        "context": final_context,
-        "query": user_query,
-        "total_tokens": system_tokens + query_tokens + used_tokens,
-        "documents_used": len(selected_docs)
-    }
-
-# 사용
-result = build_prompt_with_budget(
-    system_prompt="You are a helpful assistant.",
-    user_query="Explain context engineering.",
-    context_documents=[doc1, doc2, doc3, doc4, doc5],
-    max_total_tokens=8000,
-    output_buffer=1000
+from shared.utils import (
+    count_tokens,
+    format_tokens,
+    calculate_cost,
+    print_section,
+    print_success,
+    visualize_comparison
 )
 
-print(f"\nFinal prompt uses {result['total_tokens']} tokens")
-```
 
-## 토큰 비용 계산
+def basic_counting_example():
+    """기본 토큰 카운팅 예제"""
+    print_section("BASIC TOKEN COUNTING")
 
-```python
-def calculate_cost(
-    input_tokens: int,
-    output_tokens: int,
-    model: str = "gpt-4"
-) -> float:
-    """토큰 기반 비용 계산"""
+    texts = [
+        "Hello, world!",
+        "Context engineering is important.",
+        "안녕하세요, 반갑습니다!"
+    ]
 
-    pricing = {
-        "gpt-4": {"input": 0.03, "output": 0.06},
-        "gpt-4-turbo": {"input": 0.01, "output": 0.03},
-        "gpt-3.5-turbo": {"input": 0.0015, "output": 0.002},
-    }
+    print(f"{'Text':<40} {'Tokens':<10} {'Chars':<10} {'Ratio':<10}")
+    print(f"{'-'*70}")
 
-    if model not in pricing:
-        raise ValueError(f"Unknown model: {model}")
+    for text in texts:
+        tokens = count_tokens(text)
+        chars = len(text)
+        ratio = chars / tokens if tokens > 0 else 0
 
-    price = pricing[model]
-    cost = (input_tokens * price["input"] + output_tokens * price["output"]) / 1000
+        print(f"{text:<40} {tokens:<10} {chars:<10} {ratio:<10.2f}")
 
-    return cost
+    print(f"\n💡 Key Observation:")
+    print(f"   • English: ~4 chars/token")
+    print(f"   • Korean: ~1-2 chars/token (less efficient)")
 
-# 예제
-input_tokens = 5000
-output_tokens = 500
 
-for model in ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4"]:
-    cost = calculate_cost(input_tokens, output_tokens, model)
-    print(f"{model}: ${cost:.4f} per query")
+def budget_example():
+    """토큰 예산 관리 예제"""
+    print_section("TOKEN BUDGET MANAGEMENT")
 
-# Output:
-# gpt-3.5-turbo: $0.0085 per query
-# gpt-4-turbo: $0.0650 per query
-# gpt-4: $0.1800 per query
+    system_prompt = "You are a helpful assistant."
+    user_query = "Explain context engineering in detail."
+    context = "Context engineering is a systematic approach to managing LLM context windows. " * 50
 
-# 월간 비용 (100,000 쿼리 기준)
-for model in ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4"]:
-    cost_per_query = calculate_cost(input_tokens, output_tokens, model)
-    monthly_cost = cost_per_query * 100000
-    print(f"{model}: ${monthly_cost:,.2f} per month")
+    system_tokens = count_tokens(system_prompt)
+    query_tokens = count_tokens(user_query)
+    context_tokens = count_tokens(context)
 
-# Output:
-# gpt-3.5-turbo: $850.00 per month
-# gpt-4-turbo: $6,500.00 per month
-# gpt-4: $18,000.00 per month
-```
+    print("Components:")
+    print(f"  System prompt: {format_tokens(system_tokens)}")
+    print(f"  User query: {format_tokens(query_tokens)}")
+    print(f"  Context: {format_tokens(context_tokens)}")
+    print(f"  Total: {format_tokens(system_tokens + query_tokens + context_tokens)}")
 
-## 요약
+    # Budget management
+    max_budget = 4000
+    output_buffer = 1000
+    available = max_budget - output_buffer - system_tokens - query_tokens
 
-- `tiktoken`으로 정확한 토큰 수 계산
-- 토큰 예산 기반 컨텍스트 관리
-- 비용 최적화를 위한 모델 선택
-- 언어별 토큰 효율성 차이 고려
+    print(f"\nBudget:")
+    print(f"  Max budget: {format_tokens(max_budget)}")
+    print(f"  Output buffer: {format_tokens(output_buffer)}")
+    print(f"  Available for context: {format_tokens(available)}")
+
+    if context_tokens > available:
+        print(f"  ⚠ Context exceeds budget by {context_tokens - available} tokens")
+        print(f"  📉 Need to reduce context by {((context_tokens - available) / context_tokens * 100):.1f}%")
+    else:
+        print(f"  ✓ Context fits within budget")
+
+
+def cost_analysis():
+    """비용 분석 예제"""
+    print_section("COST ANALYSIS")
+
+    input_tokens = 3000
+    output_tokens = 500
+
+    print(f"Scenario: {format_tokens(input_tokens)} input + {format_tokens(output_tokens)} output")
+    print()
+
+    models = ["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4"]
+
+    print(f"{'Model':<20} {'Cost/Query':<15} {'Cost/10K Queries':<20}")
+    print(f"{'-'*55}")
+
+    for model in models:
+        cost = calculate_cost(input_tokens, output_tokens, model)
+        cost_10k = cost * 10000
+
+        print(f"{model:<20} ${cost:<14.4f} ${cost_10k:>18,.2f}")
+
+    # Savings calculation
+    cheapest = calculate_cost(input_tokens, output_tokens, "gpt-3.5-turbo")
+    most_expensive = calculate_cost(input_tokens, output_tokens, "gpt-4")
+    savings = most_expensive - cheapest
+
+    print(f"\n💰 Potential Savings:")
+    print(f"   Using GPT-3.5 instead of GPT-4: ${savings:.4f} per query")
+    print(f"   Monthly (100K queries): ${savings * 100000:,.2f}")
+
+
+def main():
+    basic_counting_example()
+    budget_example()
+    cost_analysis()
+
+    print_success("\nExample complete!")
+    print("\n💡 Next steps:")
+    print("  • Try multi_model_counting.py for model comparisons")
+    print("  • Try cost_calculator.py for interactive calculations")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,6 @@
+tiktoken>=0.5.0
+python-dotenv>=1.0.0
+
+# Optional: For demo_chatbot.py with actual LLM calls
+# Uncomment if you want to use real LLM API
+# openai>=1.0.0
